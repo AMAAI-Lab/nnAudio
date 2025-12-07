@@ -22,7 +22,7 @@ def get_version(rel_path):
 
 
 setuptools.setup(
-    name="nnAudio",  # Replace with your own username
+    name="nnaudio",  # Replace with your own username
     version=get_version("nnAudio/__init__.py"),
     author="KinWaiCheuk",
     author_email="u3500684@connect.hku.hk",
