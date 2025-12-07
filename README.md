@@ -1,3 +1,16 @@
+> 🚨 **Maintainers wanted**
+> 
+> This project has grown beyond what one person can maintain.
+> 
+> Due to time constraints, the original author is no longer able to do regular code review.
+> We are looking for contributors who can help with:
+> - Code review
+> - Issue triage
+> - Ongoing maintenance
+> 
+> If you're interested, please comment on
+> [this issue](#140) to introduce yourself.
+
 # nnAudio
 nnAudio is an audio processing toolbox using PyTorch convolutional neural network as its backend. By doing so, spectrograms can be generated from audio on-the-fly during neural network training and the Fourier kernels (e.g. or CQT kernels) can be trained. Full details of nnAudio can be found in [our paper](https://ieeexplore.ieee.org/document/9174990). You can use nnAudio for free, however, if you use this library, please cite the paper as per the reference provided below. 
 
@@ -9,7 +22,7 @@ nnAudio is an audio processing toolbox using PyTorch convolutional neural networ
 
 or
 
-`pip install nnAudio==0.3.1`
+`pip install nnaudio==0.3.4`
 
 ## Documentation
 https://kinwaicheuk.github.io/nnAudio/index.html
