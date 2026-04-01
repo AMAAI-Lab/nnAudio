@@ -695,7 +695,7 @@ Conclusion for scope judgment:
 
 This step added an English-facing summary document:
 
-- `MIGRATION_SUMMARY_EN.md`
+- `MIGRATION_SUMMARY.md`
 
 Purpose:
 
