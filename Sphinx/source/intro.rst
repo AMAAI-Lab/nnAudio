@@ -23,11 +23,11 @@ The lastest version might not be always available in PyPI, in this case, please 
 
 Via GitHub
 ~~~~~~~~~~
-To install the lastest version from github, you can do ``pip install git+https://github.com/KinWaiCheuk/nnAudio.git#subdirectory=Installation``.
+To install the lastest version from github, you can do ``pip install git+https://github.com/AMAAI-Lab/nnAudio.git#subdirectory=Installation``.
 
 Alternatively, you can also install from the github manually by the following steps:
 
-1. Clone the repository with ``git clone https://github.com/KinWaiCheuk/nnAudio.git <any path you want to save to>``
+1. Clone the repository with ``git clone https://github.com/AMAAI-Lab/nnAudio.git <any path you want to save to>``
 
 2. ``cd`` into the ``Installation`` folder where the ``setup.py`` is located at
 
@@ -37,13 +37,13 @@ Alternatively, you can also install from the github manually by the following st
 Requirement
 ~~~~~~~~~~~
 
-Numpy >= 1.14.5
+Numpy >= 1.14.5, < 2.0
 
 Scipy >= 1.2.0
 
 PyTorch >= 1.6.0 (Griffin-Lim only available after 1.6.0)
 
-Python >= 3.6
+Python >= 3.8
 
 librosa = 0.7.0 (Theortically nnAudio depends on librosa. But we only need to use a single function mel from librosa.filters. To save users troubles from installing librosa for this single function, I just copy the chunk of functions corresponding to mel in my code so that nnAudio runs without the need to install librosa)
 
@@ -70,6 +70,8 @@ The input shape should be `(batch, len_audio)`.
                                   fmin=50,fmax=11025, sr=sr) # Initializing the model
 
     spec = spec_layer(x) # Feed-forward your waveform to get the spectrogram      
+
+For inverse STFT, use the standard uniform-bin configuration with ``freq_scale='no'``. The non-uniform ``linear``, ``log``, and ``log2`` frequency scales should be treated as analysis-only.
     
  
 .. _on-the-fly: 

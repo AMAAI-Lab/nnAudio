@@ -20,7 +20,7 @@ This version can be obtained via `pip install nnAudio==0.2.5`.
 
 ## version 0.2.4 (11 June 2021): 
 1. CQT2010 bug has been fixed [#85](/../../issues/85).
-1. Provide a wider support for scipy versions using `from scipy.fftpack import fft` in [utils.py](https://github.com/KinWaiCheuk/nnAudio/blob/e9b1697963f0fd8e5030b130a30974bc06408baf/Installation/nnAudio/utils.py#L13)
+1. Provide a wider support for scipy versions using `from scipy.fftpack import fft` in [utils.py](https://github.com/AMAAI-Lab/nnAudio/blob/e9b1697963f0fd8e5030b130a30974bc06408baf/Installation/nnAudio/utils.py#L13)
 1. Documentation error for STFT has been fixed [#90](/../../issues/90)
 
 This version can be obtained via `pip install nnAudio==0.2.4`.

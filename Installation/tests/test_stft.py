@@ -113,6 +113,70 @@ def test_stft_phase(device):
     assert real_diff < 2e-2 and imag_diff < 2e-2
 
 
+@pytest.mark.parametrize("device", [*device_args])
+def test_stft_torchscript(device):
+    x = torch.randn(2, 4096, device=device)
+    stft = STFT(n_fft=1024, hop_length=256, verbose=False).to(device)
+    scripted = torch.jit.script(stft)
+
+    expected = stft(x, output_format="Complex")
+    actual = scripted(x, output_format="Complex")
+
+    assert torch.allclose(expected, actual, rtol=1e-5, atol=1e-5)
+
+
+@pytest.mark.parametrize("device", [*device_args])
+def test_istft_torchscript(device):
+    x = torch.randn(2, 4096, device=device)
+    stft = STFT(n_fft=1024, hop_length=256, verbose=False).to(device)
+    X = stft(x, output_format="Complex")
+
+    istft = iSTFT(n_fft=1024, hop_length=256, verbose=False).to(device)
+    scripted = torch.jit.script(istft)
+
+    expected = istft(X, onesided=True, length=x.shape[-1])
+    actual = scripted(X, onesided=True, length=x.shape[-1])
+
+    assert torch.allclose(expected, actual, rtol=1e-5, atol=1e-5)
+
+
+@pytest.mark.parametrize("freq_scale", ["linear", "log", "log2"])
+@pytest.mark.parametrize("device", [*device_args])
+def test_stft_inverse_nonuniform_freq_scale_raises(freq_scale, device):
+    x = torch.randn(2, 4096, device=device)
+    with pytest.warns(UserWarning, match="analysis-only"):
+        stft = STFT(
+            n_fft=1024,
+            hop_length=256,
+            freq_scale=freq_scale,
+            iSTFT=True,
+            verbose=False,
+        ).to(device)
+
+    X = stft(x, output_format="Complex")
+
+    with pytest.raises(RuntimeError, match="freq_scale='no'"):
+        stft.inverse(X, onesided=True, length=x.shape[-1])
+
+
+@pytest.mark.parametrize("freq_scale", ["linear", "log"])
+@pytest.mark.parametrize("device", [*device_args])
+def test_istft_nonuniform_freq_scale_raises(freq_scale, device):
+    x = torch.randn(2, 4096, device=device)
+    stft = STFT(
+        n_fft=1024, hop_length=256, freq_scale=freq_scale, verbose=False
+    ).to(device)
+    X = stft(x, output_format="Complex")
+
+    with pytest.warns(UserWarning, match="analysis-only"):
+        istft = iSTFT(
+            n_fft=1024, hop_length=256, freq_scale=freq_scale, verbose=False
+        ).to(device)
+
+    with pytest.raises(RuntimeError, match="freq_scale='no'"):
+        istft(X, onesided=True, length=x.shape[-1])
+
+
 if torch.cuda.is_available():
     x = torch.randn((4, 44100)).to(
         f"cuda:{gpu_idx}"

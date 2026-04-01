@@ -40,20 +40,22 @@ def rfft_fn(x, n=None, onesided=False):
         return torch.rfft(x, n, onesided=onesided)
 
 ## --------------------------- Filter Design ---------------------------##
-def torch_window_sumsquare(w, n_frames, stride, n_fft, power=2):
+def torch_window_sumsquare(
+    w: torch.Tensor, n_frames: int, stride: int, n_fft: int, power: int = 2
+) -> torch.Tensor:
     w_stacks = w.unsqueeze(-1).repeat((1, n_frames)).unsqueeze(0)
     # Window length + stride*(frames-1)
     output_len = w_stacks.shape[1] + stride * (w_stacks.shape[2] - 1)
     return fold(
-        w_stacks ** power, (1, output_len), kernel_size=(1, n_fft), stride=stride
+        w_stacks ** power, (1, output_len), kernel_size=(1, n_fft), stride=(1, stride)
     )
 
 
-def overlap_add(X, stride):
+def overlap_add(X: torch.Tensor, stride: int) -> torch.Tensor:
     n_fft = X.shape[1]
     output_len = n_fft + stride * (X.shape[2] - 1)
 
-    return fold(X, (1, output_len), kernel_size=(1, n_fft), stride=stride).flatten(1)
+    return fold(X, (1, output_len), kernel_size=(1, n_fft), stride=(1, stride)).flatten(1)
 
 
 def uniform_distribution(r1, r2, *size, device):

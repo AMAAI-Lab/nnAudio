@@ -32,6 +32,8 @@ Quick Start
 
     spec = spec_layer(x) # Feed-forward your waveform to get the spectrogram      
 
+For inverse STFT, use the standard uniform-bin configuration with ``freq_scale='no'``. The non-uniform ``linear``, ``log``, and ``log2`` frequency scales should be treated as analysis-only.
+
 nnAudio is an audio processing toolbox using PyTorch convolutional neural
 network as its backend. By doing so, spectrograms can be generated from
 audio on-the-fly during neural network training and the Fourier kernels
@@ -53,7 +55,7 @@ convolutional neural network. The name of nnAudio comes from
 
 The implementation details for **nnAudio** have also been published in IEEE Access, people who are interested can read the `paper <https://ieeexplore.ieee.org/document/9174990>`__.
 
-The source code for **nnAudio** can be found in `GitHub <https://github.com/KinWaiCheuk/nnAudio>`__.
+The source code for **nnAudio** can be found in `GitHub <https://github.com/AMAAI-Lab/nnAudio>`__.
 
 
 .. toctree::

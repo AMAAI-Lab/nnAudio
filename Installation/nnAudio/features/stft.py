@@ -1,8 +1,12 @@
+from typing import Optional
+
 from torch.nn.functional import conv1d, conv2d, fold
+import torch.nn.functional as F
 import torch.nn as nn
 import torch
 import numpy as np
 from time import time
+import warnings
 from ..utils import *
 from scipy.signal import get_window
 
@@ -12,9 +16,25 @@ class STFTBase(nn.Module):
     STFT and iSTFT share the same `inverse_stft` function
     """
 
+    def _check_inverse_support(self):
+        if not self.supports_inverse:
+            raise RuntimeError(
+                "Inverse STFT is only supported for freq_scale='no'. "
+                "The current implementation is not numerically reliable for "
+                "non-uniform frequency scales such as 'linear', 'log', or 'log2'."
+            )
+
     def inverse_stft(
-        self, X, kernel_cos, kernel_sin, onesided=True, length=None, refresh_win=True
+        self,
+        X,
+        kernel_cos,
+        kernel_sin,
+        onesided: bool = True,
+        length: Optional[int] = None,
+        refresh_win: bool = True,
     ):
+        self._check_inverse_support()
+
         # If the input spectrogram contains only half of the n_fft
         # Use extend_fbins function to get back another half
         if onesided:
@@ -39,15 +59,26 @@ class STFTBase(nn.Module):
         # Prepare the window sumsqure for division
         # Only need to create this window once to save time
         # Unless the input spectrograms have different time steps
-        if hasattr(self, "w_sum") == False or refresh_win == True:
-            self.w_sum = torch_window_sumsquare(
+        if torch.jit.is_scripting():
+            w_sum = torch_window_sumsquare(
                 self.window_mask.flatten(), X.shape[2], self.stride, self.n_fft
             ).flatten()
-            self.nonzero_indices = self.w_sum > 1e-10
+            nonzero_indices = w_sum > 1e-10
         else:
-            pass
-        real[:, self.nonzero_indices] = real[:, self.nonzero_indices].div(
-            self.w_sum[self.nonzero_indices]
+            if (
+                hasattr(self, "w_sum") == False
+                or hasattr(self, "nonzero_indices") == False
+                or refresh_win == True
+            ):
+                self.w_sum = torch_window_sumsquare(
+                    self.window_mask.flatten(), X.shape[2], self.stride, self.n_fft
+                ).flatten()
+                self.nonzero_indices = self.w_sum > 1e-10
+            w_sum = self.w_sum
+            nonzero_indices = self.nonzero_indices
+
+        real[:, nonzero_indices] = real[:, nonzero_indices].div(
+            w_sum[nonzero_indices]
         )
         # Remove padding
         if length is None:
@@ -189,6 +220,8 @@ class STFT(STFTBase):
         self.window = window
         self.win_length = win_length
         self.iSTFT = iSTFT
+        self.freq_scale = freq_scale
+        self.supports_inverse = freq_scale == "no"
         self.trainable = trainable
         start = time()
 
@@ -221,6 +254,13 @@ class STFT(STFTBase):
         if iSTFT:
             self.register_buffer("kernel_sin_inv", kernel_sin_inv.unsqueeze(-1))
             self.register_buffer("kernel_cos_inv", kernel_cos_inv.unsqueeze(-1))
+            if not self.supports_inverse:
+                warnings.warn(
+                    "STFT.inverse is only reliable for freq_scale='no'. "
+                    "Non-uniform frequency scales are analysis-only and will "
+                    "raise if inverse() is called.",
+                    UserWarning,
+                )
 
         # Making all these variables nn.Parameter, so that the model can be used with nn.Parallel
         #         self.kernel_sin = nn.Parameter(self.kernel_sin, requires_grad=self.trainable)
@@ -253,7 +293,7 @@ class STFT(STFTBase):
         else:
             pass
 
-    def forward(self, x, output_format=None):
+    def forward(self, x, output_format: Optional[str] = None):
         """
         Convert a batch of waveforms to spectrograms.
 
@@ -271,22 +311,25 @@ class STFT(STFTBase):
             Default value is ``Complex``.
 
         """
-        output_format = output_format or self.output_format
-        self.num_samples = x.shape[-1]
+        if output_format is None:
+            output_format = self.output_format
+        num_samples = x.shape[-1]
 
         x = broadcast_dim(x)
         if self.center:
+            pad = (self.pad_amount, self.pad_amount)
             if self.pad_mode == "constant":
-                padding = nn.ConstantPad1d(self.pad_amount, 0)
-
+                x = F.pad(x, pad, "constant", 0.0)
             elif self.pad_mode == "reflect":
-                if self.num_samples < self.pad_amount:
+                if num_samples < self.pad_amount:
                     raise AssertionError(
                         "Signal length shorter than reflect padding length (n_fft // 2)."
                     )
-                padding = nn.ReflectionPad1d(self.pad_amount)
-
-            x = padding(x)
+                x = F.pad(x, pad, "reflect")
+            else:
+                raise ValueError(
+                    "pad_mode must be either 'constant' or 'reflect' for STFT."
+                )
         spec_imag = conv1d(x, self.wsin, stride=self.stride)
         spec_real = conv1d(
             x, self.wcos, stride=self.stride
@@ -315,12 +358,19 @@ class STFT(STFTBase):
                 -spec_imag + 0.0, spec_real
             )  # +0.0 removes -0.0 elements, which leads to error in calculating phase
 
-    def inverse(self, X, onesided=True, length=None, refresh_win=True):
+    def inverse(
+        self,
+        X,
+        onesided: bool = True,
+        length: Optional[int] = None,
+        refresh_win: bool = True,
+    ):
         """
         This function is same as the :func:`~nnAudio.Spectrogram.iSTFT` class,
         which is to convert spectrograms back to waveforms.
         It only works for the complex value spectrograms. If you have the magnitude spectrograms,
         please use :func:`~nnAudio.Spectrogram.Griffin_Lim`.
+        Reliable inversion is currently supported only when ``freq_scale='no'``.
 
         Parameters
         ----------
@@ -368,8 +418,8 @@ class iSTFT(STFTBase):
     If trainability is not required, it is recommended to use the ``inverse`` method under the ``STFT`` class
     to save GPU/RAM memory.
 
-    When ``trainable=True`` and ``freq_scale!='no'``, there is no guarantee that the inverse is perfect, please
-    use with extra care.
+    Reliable inversion is currently supported only when ``freq_scale='no'``.
+    Non-uniform frequency scales such as ``linear``, ``log``, and ``log2`` are analysis-only.
 
     Parameters
     ----------
@@ -466,6 +516,8 @@ class iSTFT(STFTBase):
         self.win_length = win_length
         self.stride = hop_length
         self.center = center
+        self.freq_scale = freq_scale
+        self.supports_inverse = freq_scale == "no"
 
         self.pad_amount = self.n_fft // 2
         self.refresh_win = refresh_win
@@ -523,7 +575,21 @@ class iSTFT(STFTBase):
         else:
             pass
 
-    def forward(self, X, onesided=False, length=None, refresh_win=None):
+        if not self.supports_inverse:
+            warnings.warn(
+                "iSTFT is only reliable for freq_scale='no'. "
+                "Non-uniform frequency scales are analysis-only and will "
+                "raise when the inverse is executed.",
+                UserWarning,
+            )
+
+    def forward(
+        self,
+        X,
+        onesided: bool = False,
+        length: Optional[int] = None,
+        refresh_win: Optional[bool] = None,
+    ):
         """
         If your spectrograms only have ``n_fft//2+1`` frequency bins, please use ``onesided=True``,
         else use ``onesided=False``
@@ -533,7 +599,7 @@ class iSTFT(STFTBase):
         If your input spectrograms X are of the same length, please use ``refresh_win=None`` to increase
         computational speed.
         """
-        if refresh_win == None:
+        if refresh_win is None:
             refresh_win = self.refresh_win
 
         assert X.dim() == 4, (

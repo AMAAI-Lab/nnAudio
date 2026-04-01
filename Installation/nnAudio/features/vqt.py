@@ -4,6 +4,7 @@ import numpy as np
 from time import time
 from ..librosa_functions import * 
 from ..utils import * 
+from .cqt import CQT1992v2
 
 
 class VQT(torch.nn.Module):
@@ -41,6 +42,24 @@ class VQT(torch.nn.Module):
         self.sr = sr
         self.gamma = gamma
         self.basis_norm = basis_norm
+
+        if self.gamma == 0:
+            self.cqt = CQT1992v2(
+                sr=sr,
+                hop_length=hop_length,
+                fmin=fmin,
+                fmax=fmax,
+                n_bins=n_bins,
+                bins_per_octave=bins_per_octave,
+                filter_scale=filter_scale,
+                norm=basis_norm,
+                window=window,
+                pad_mode=pad_mode,
+                trainable=trainable,
+                output_format=output_format,
+                verbose=verbose,
+            )
+            return
 
         # It will be used to calculate filter_cutoff and creating CQT kernels
         Q = float(filter_scale)/(2**(1/bins_per_octave)-1)
@@ -154,6 +173,11 @@ class VQT(torch.nn.Module):
             It will be automatically broadcast to the right shape
         """              
         output_format = output_format or self.output_format
+
+        if self.gamma == 0:
+            return self.cqt(
+                x, output_format=output_format, normalization_type=normalization_type
+            )
         
         x = broadcast_dim(x)
         if self.earlydownsample==True:

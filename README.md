@@ -18,7 +18,7 @@ nnAudio is an audio processing toolbox using PyTorch convolutional neural networ
 [Kapre](https://github.com/keunwoochoi/kapre) has a similar concept in which they also use 1D convolutional neural network to extract spectrograms based on [Keras](https://keras.io). Other GPU audio processing tools are [torchaudio](https://github.com/pytorch/audio) and [tf.signal](https://www.tensorflow.org/api_docs/python/tf/signal). But they are not using a neural network approach, and hence the Fourier basis can not be trained. As of PyTorch 1.6.0, torchaudio is still very difficult to install under the Windows environment due to `sox`. nnAudio is a more compatible audio processing tool across different operating systems since it relies mostly on PyTorch convolutional neural network. The name of nnAudio comes from `torch.nn`
 
 ## Installation
-`pip install git+https://github.com/KinWaiCheuk/nnAudio.git#subdirectory=Installation`
+`pip install git+https://github.com/AMAAI-Lab/nnAudio.git#subdirectory=Installation`
 
 or
 
@@ -28,7 +28,7 @@ or
 https://kinwaicheuk.github.io/nnAudio/index.html
 
 ## Comparison with other libraries
-| Feature | [nnAudio](https://github.com/KinWaiCheuk/nnAudio) | [torch.stft](https://github.com/pytorch/pytorch/blob/master/aten/src/ATen/native/SpectralOps.cpp) | [kapre](https://github.com/keunwoochoi/kapre) | [torchaudio](https://github.com/pytorch/audio) | [tf.signal](https://github.com/tensorflow/tensorflow/tree/master/tensorflow/python/ops/signal) | [torch-stft](https://github.com/pseeth/torch-stft) | [librosa](https://github.com/librosa/librosa) |
+| Feature | [nnAudio](https://github.com/AMAAI-Lab/nnAudio) | [torch.stft](https://github.com/pytorch/pytorch/blob/master/aten/src/ATen/native/SpectralOps.cpp) | [kapre](https://github.com/keunwoochoi/kapre) | [torchaudio](https://github.com/pytorch/audio) | [tf.signal](https://github.com/tensorflow/tensorflow/tree/master/tensorflow/python/ops/signal) | [torch-stft](https://github.com/pseeth/torch-stft) | [librosa](https://github.com/librosa/librosa) |
 | ------- | ------- | ---------- | ----- | ---------- | ---------------------------- | ---------- | ------- |
 | Trainable | ✅ | ❌| ✅ | ❌ | ❌ | ✅ | ❌ |
 | Differentiable | ✅  | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ |
@@ -47,6 +47,8 @@ https://kinwaicheuk.github.io/nnAudio/index.html
 ✅: Fully support    ☑️: Developing (only available in dev version)    ❌: Not support
 
 <sup>1</sup> [Combining Spectral and Temporal Representations for Multipitch Estimation of Polyphonic Music](https://ieeexplore.ieee.org/document/7118691)
+
+Note: inverse STFT is currently reliable only for the standard uniform-bin configuration with `freq_scale='no'`. Non-uniform STFT variants such as `linear`, `log`, and `log2` should be treated as analysis-only.
 
 ## News & Changelog
 To view the full changelog, please go to [CHANGELOG.md](CHANGELOG.md)
@@ -89,14 +91,23 @@ Alternatively, you may also contribute by:
 
 
 
+## Release to PyPI
+This repository includes a GitHub Actions workflow at `.github/workflows/publish-to-pypi.yml` that builds and publishes the package when you push a tag like `v0.3.5`.
+
+Before using it for the first time:
+1. In GitHub, create an environment named `pypi` for this repository and require manual approval for releases.
+2. In PyPI, open the `nnaudio` project settings and add a Trusted Publisher for owner `AMAAI-Lab`, repository `nnAudio`, workflow `.github/workflows/publish-to-pypi.yml`, and environment `pypi`.
+3. Bump `Installation/nnAudio/__init__.py` so `__version__` matches the release tag.
+4. Push the tag, for example `git tag v0.3.5 && git push origin v0.3.5`.
+
 ## Dependencies
-Numpy >= 1.14.5
+Numpy >= 1.14.5, < 2.0
 
 Scipy >= 1.2.0
 
 PyTorch >= 1.6.0 (Griffin-Lim only available after 1.6.0)
 
-Python >= 3.6
+Python >= 3.8
 
 librosa = 0.7.0 (Theoretically nnAudio depends on librosa. But we only need to use a single function `mel` from `librosa.filters`. To save users troubles from installing librosa for this single function, I just copy the chunk of functions corresponding to `mel` in my code so that nnAudio runs without the need to install librosa)
 
@@ -106,5 +117,3 @@ librosa = 0.7.0 (Theoretically nnAudio depends on librosa. But we only need to u
 [Kapre](https://www.semanticscholar.org/paper/Kapre%3A-On-GPU-Audio-Preprocessing-Layers-for-a-of-Choi-Joo/b1ad5643e5dd66fac27067b00e5c814f177483ca?citingPapersSort=is-influential#citing-papers)
 
 [torch-stft](https://github.com/pseeth/torch-stft)
-
-
